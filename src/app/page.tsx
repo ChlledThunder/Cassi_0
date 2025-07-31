@@ -45,8 +45,9 @@ export default function Home() {
   const [activeGenres, setActiveGenres] = useState(songGenres);
   const [showStartMenu, setShowStartMenu] = useState(false);
   const [showMultiplayer, setShowMultiplayer] = useState(false);
-  const [multiplayerStep, setMultiplayerStep] = useState<'menu' | 'username' | 'create' | 'lobby' | 'game'>('menu');
+  const [multiplayerStep, setMultiplayerStep] = useState<'menu' | 'username' | 'join' | 'create' | 'lobby' | 'game'>('menu');
   const [username, setUsername] = useState("");
+  const [roomCodeInput, setRoomCodeInput] = useState("");
   const [roomSize, setRoomSize] = useState(2);
   const [roomId, setRoomId] = useState("");
   const [players, setPlayers] = useState<Array<{username: string, id: string, isHost: boolean}>>([]);
@@ -130,6 +131,17 @@ export default function Home() {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle URL parameters for joining rooms
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if (roomParam) {
+      setRoomCodeInput(roomParam.toUpperCase());
+      setShowMultiplayer(true);
+      setMultiplayerStep('join');
+    }
   }, []);
 
   // Glitch effect
@@ -710,7 +722,7 @@ export default function Home() {
                       Create Room
                     </button>
                     <button
-                      onClick={() => setMultiplayerStep('username')}
+                      onClick={() => setMultiplayerStep('join')}
                       className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
                       style={{ 
                         fontFamily: 'MS Sans Serif, sans-serif',
@@ -782,6 +794,107 @@ export default function Home() {
                       }}
                     >
                       Continue
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {multiplayerStep === 'join' && (
+                <div className="text-center">
+                  <h3 className="text-lg font-bold mb-4" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    Join Room
+                  </h3>
+                  <div className="mb-4">
+                    <label className="block text-sm font-bold mb-2" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      Room Code:
+                    </label>
+                    <input
+                      type="text"
+                      value={roomCodeInput}
+                      onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
+                      placeholder="Enter room code..."
+                      className="w-full p-2 border border-gray-400 bg-white text-gray-800 font-mono text-sm mb-4"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-bold mb-2" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      Your Username:
+                    </label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Enter your username..."
+                      className="w-full p-2 border border-gray-400 bg-white text-gray-800 font-mono text-sm mb-4"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setMultiplayerStep('menu')}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (roomCodeInput.trim() && username.trim()) {
+                          joinRoom(roomCodeInput.trim());
+                        }
+                      }}
+                      disabled={!roomCodeInput.trim() || !username.trim()}
+                      className="flex-1 bg-blue-200 hover:bg-blue-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-blue-100 border-l-blue-100 border-r-blue-400 border-b-blue-400 active:border-t-blue-400 active:border-l-blue-400 active:border-r-blue-100 active:border-b-blue-100 transform active:translate-y-0.5 transition-all duration-150 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Join Room
                     </button>
                   </div>
                 </div>
