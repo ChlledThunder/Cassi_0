@@ -987,30 +987,89 @@ export default function Home() {
                   </h3>
                   
                   <div className="mb-4">
-                    <h4 className="font-bold mb-2" style={{ 
-                      fontFamily: 'MS Sans Serif, sans-serif',
-                      imageRendering: 'pixelated',
-                      textRendering: 'optimizeSpeed',
-                      WebkitFontSmoothing: 'none',
-                      MozOsxFontSmoothing: 'grayscale'
-                    }}>
-                      Players ({players.length}/{roomSize}):
-                    </h4>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-bold" style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}>
+                        Players ({players.length}/{roomSize}):
+                      </h4>
+                      <div className="text-xs text-gray-600" style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}>
+                        {players.length === roomSize ? '🟢 Room Full' : '🟡 Waiting for players...'}
+                      </div>
+                    </div>
+                    <div className="bg-white border-2 border-t-gray-500 border-l-gray-500 border-r-gray-100 border-b-gray-100 shadow-inner max-h-40 overflow-y-auto">
                       {players.map((player, index) => (
-                        <div key={player.id} className="flex items-center justify-between bg-gray-100 p-2">
-                          <span className="text-sm" style={{ 
-                            fontFamily: 'MS Sans Serif, sans-serif',
-                            imageRendering: 'pixelated',
-                            textRendering: 'optimizeSpeed',
-                            WebkitFontSmoothing: 'none',
-                            MozOsxFontSmoothing: 'grayscale'
-                          }}>
-                            {player.username} {player.isHost && '(Host)'}
-                          </span>
-                          <span className="text-xs text-gray-600">Player {index + 1}</span>
+                        <div key={player.id} className="flex items-center justify-between p-3 border-b border-gray-200 last:border-b-0">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold" style={{ 
+                              fontFamily: 'MS Sans Serif, sans-serif',
+                              imageRendering: 'pixelated',
+                              textRendering: 'optimizeSpeed',
+                              WebkitFontSmoothing: 'none',
+                              MozOsxFontSmoothing: 'grayscale'
+                            }}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm" style={{ 
+                                fontFamily: 'MS Sans Serif, sans-serif',
+                                imageRendering: 'pixelated',
+                                textRendering: 'optimizeSpeed',
+                                WebkitFontSmoothing: 'none',
+                                MozOsxFontSmoothing: 'grayscale'
+                              }}>
+                                {player.username}
+                              </div>
+                              <div className="flex gap-1 mt-1">
+                                {player.isHost && (
+                                  <span className="text-xs bg-yellow-200 px-2 py-0.5 rounded font-bold" style={{ 
+                                    fontFamily: 'MS Sans Serif, sans-serif',
+                                    imageRendering: 'pixelated',
+                                    textRendering: 'optimizeSpeed',
+                                    WebkitFontSmoothing: 'none',
+                                    MozOsxFontSmoothing: 'grayscale'
+                                  }}>
+                                    👑 Host
+                                  </span>
+                                )}
+                                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded" style={{ 
+                                  fontFamily: 'MS Sans Serif, sans-serif',
+                                  imageRendering: 'pixelated',
+                                  textRendering: 'optimizeSpeed',
+                                  WebkitFontSmoothing: 'none',
+                                  MozOsxFontSmoothing: 'grayscale'
+                                }}>
+                                  Player {index + 1}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="w-3 h-3 bg-green-400 rounded-full" title="Online"></div>
+                          </div>
                         </div>
                       ))}
+                      {players.length < roomSize && (
+                        <div className="p-3 text-center text-gray-500 text-sm italic" style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}>
+                          {roomSize - players.length} more player{roomSize - players.length > 1 ? 's' : ''} needed...
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1103,6 +1162,72 @@ export default function Home() {
                       MozOsxFontSmoothing: 'grayscale'
                     }}>
                       {players[currentPlayer]?.username}
+                    </div>
+                  </div>
+
+                  {/* Player List */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-bold text-sm" style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}>
+                        Players in Room:
+                      </h4>
+                      <span className="text-xs text-gray-600" style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}>
+                        {players.length}/{roomSize}
+                      </span>
+                    </div>
+                    <div className="bg-gray-100 border border-gray-400 max-h-24 overflow-y-auto">
+                      {players.map((player, index) => (
+                        <div 
+                          key={player.id} 
+                          className={`flex items-center justify-between p-2 text-xs ${index === currentPlayer ? 'bg-blue-100' : ''}`}
+                          style={{ 
+                            fontFamily: 'MS Sans Serif, sans-serif',
+                            imageRendering: 'pixelated',
+                            textRendering: 'optimizeSpeed',
+                            WebkitFontSmoothing: 'none',
+                            MozOsxFontSmoothing: 'grayscale'
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{player.username}</span>
+                            {player.isHost && (
+                              <span className="text-xs bg-yellow-200 px-1 rounded" style={{ 
+                                fontFamily: 'MS Sans Serif, sans-serif',
+                                imageRendering: 'pixelated',
+                                textRendering: 'optimizeSpeed',
+                                WebkitFontSmoothing: 'none',
+                                MozOsxFontSmoothing: 'grayscale'
+                              }}>
+                                Host
+                              </span>
+                            )}
+                            {index === currentPlayer && (
+                              <span className="text-xs bg-green-200 px-1 rounded" style={{ 
+                                fontFamily: 'MS Sans Serif, sans-serif',
+                                imageRendering: 'pixelated',
+                                textRendering: 'optimizeSpeed',
+                                WebkitFontSmoothing: 'none',
+                                MozOsxFontSmoothing: 'grayscale'
+                              }}>
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-gray-600">P{index + 1}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
