@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { io, Socket } from "socket.io-client";
+import { useSocketVercel } from "@/hooks/use-socket-vercel";
 
 const songGenres = [
   "Alternative", "Chinese", "Champagne Papi", "City Pop", "Harsh Noise", "Japanese", "Korean", "Metal", "Phonk", "Rage", "Ye Ye", "Rock", "Pop", "R&b", "Rap", "Disco", "Soul", "Trap", "Rap", "Jazz", "Ost", "Country", "Electronic", "Ambient", "Funk", "Punk", "Folk", "Classical", "I CAME TO GOON 🗣️🔥"
@@ -57,8 +58,6 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<Array<{username: string, message: string, timestamp: Date}>>([]);
   const [newMessage, setNewMessage] = useState("");
   const [currentTime, setCurrentTime] = useState("");
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [connectionError, setConnectionError] = useState("");
   const startMenuRef = useRef<HTMLDivElement>(null);
 
   // Manage Japanese phrases appearance
@@ -147,157 +146,28 @@ export default function Home() {
     }
   }, []);
 
-  // Socket.IO connection and event handlers
+  // Socket.IO connection using Vercel-compatible hook
+  const {
+    socket,
+    isConnected,
+    connectionError,
+    connect,
+    disconnect,
+    reconnect
+  } = useSocketVercel({
+    onConnect: () => console.log('Socket connected!'),
+    onDisconnect: (reason) => console.log('Socket disconnected:', reason),
+    onError: (error) => console.log('Socket error:', error)
+  });
+
+  // Set up socket event handlers
   useEffect(() => {
-    console.log('Attempting to initialize WebSocket connection...');
-    
-    // Try a simple WebSocket connection first
-    let ws: WebSocket;
-    let connectionAttempt = 0;
-    
-    const tryWebSocketConnection = () => {
-      connectionAttempt++;
-      console.log(`WebSocket connection attempt ${connectionAttempt}`);
-      
-      try {
-        // Try different WebSocket URLs
-        const urls = [
-          'ws://localhost:3000/api/socketio',
-          'ws://127.0.0.1:3000/api/socketio',
-          'ws://0.0.0.0:3000/api/socketio',
-          `${window.location.origin.replace('http', 'ws')}/api/socketio`
-        ];
-        
-        const url = urls[connectionAttempt - 1];
-        console.log(`Trying WebSocket URL: ${url}`);
-        
-        ws = new WebSocket(url);
-        
-        ws.onopen = () => {
-          console.log(`✅ WebSocket connected (attempt ${connectionAttempt})`);
-          setConnectionError("");
-          
-          // Now try Socket.IO with the working base URL
-          const socketUrl = url.replace('ws://', 'http://').replace('wss://', 'https://');
-          trySocketIOConnection(socketUrl);
-        };
-        
-        ws.onerror = (error) => {
-          console.error(`❌ WebSocket error (attempt ${connectionAttempt}):`, error);
-          
-          if (connectionAttempt < urls.length) {
-            console.log('Trying next WebSocket URL...');
-            setTimeout(tryWebSocketConnection, 1000);
-          } else {
-            console.log('All WebSocket attempts failed, trying Socket.IO directly...');
-            trySocketIOConnectionDirectly();
-          }
-        };
-        
-        ws.onclose = (event) => {
-          console.log(`WebSocket closed (attempt ${connectionAttempt}):`, event);
-        };
-        
-      } catch (error) {
-        console.error(`Error creating WebSocket (attempt ${connectionAttempt}):`, error);
-        
-        if (connectionAttempt < 4) {
-          setTimeout(tryWebSocketConnection, 1000);
-        } else {
-          trySocketIOConnectionDirectly();
-        }
-      }
-    };
-    
-    const trySocketIOConnection = (baseUrl: string) => {
-      console.log('Trying Socket.IO with working base URL:', baseUrl);
-      
-      try {
-        const socketInstance = io(baseUrl, {
-          path: '/api/socketio',
-          transports: ['websocket', 'polling'],
-          timeout: 10000,
-          forceNew: true,
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000
-        });
-        
-        socketInstance.on('connect', () => {
-          console.log('✅ Socket.IO connected via WebSocket test');
-          setConnectionError("");
-          setSocket(socketInstance);
-          setupSocketHandlers(socketInstance);
-        });
-        
-        socketInstance.on('connect_error', (error) => {
-          console.error('❌ Socket.IO connection error:', error);
-          setConnectionError(`Failed to connect: ${error.message}`);
-        });
-        
-      } catch (error) {
-        console.error('Error creating Socket.IO instance:', error);
-        setConnectionError('Failed to create Socket.IO connection');
-      }
-    };
-    
-    const trySocketIOConnectionDirectly = () => {
-      console.log('Trying Socket.IO connection directly...');
-      
-      const connectionUrls = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        window.location.origin
-      ];
-      
-      let attempt = 0;
-      
-      const tryNextUrl = () => {
-        if (attempt >= connectionUrls.length) {
-          setConnectionError('All connection attempts failed');
-          return;
-        }
-        
-        const url = connectionUrls[attempt];
-        attempt++;
-        console.log(`Trying Socket.IO URL: ${url}`);
-        
-        try {
-          const socketInstance = io(url, {
-            path: '/api/socketio',
-            transports: ['polling'], // Force polling only
-            timeout: 5000,
-            forceNew: true,
-            reconnection: false,
-            autoConnect: true
-          });
-          
-          socketInstance.on('connect', () => {
-            console.log(`✅ Socket.IO connected to ${url}`);
-            setConnectionError("");
-            setSocket(socketInstance);
-            setupSocketHandlers(socketInstance);
-          });
-          
-          socketInstance.on('connect_error', (error) => {
-            console.error(`❌ Socket.IO error for ${url}:`, error);
-            setTimeout(tryNextUrl, 1000);
-          });
-          
-        } catch (error) {
-          console.error(`Error creating Socket.IO for ${url}:`, error);
-          setTimeout(tryNextUrl, 1000);
-        }
-      };
-      
-      tryNextUrl();
-    };
-    
+    if (!socket) return;
+
     const setupSocketHandlers = (socketInstance: Socket) => {
       // Disconnect event
       socketInstance.on('disconnect', (reason) => {
         console.log('🔌 Disconnected from server:', reason);
-        setConnectionError(`Disconnected: ${reason}`);
       });
       
       // Debug: Listen for all events
@@ -365,17 +235,23 @@ export default function Home() {
         alert(`Error: ${data.message}`);
       });
     };
-    
-    // Start with WebSocket test
-    tryWebSocketConnection();
-    
-    // Cleanup on unmount
+
+    setupSocketHandlers(socket);
+
     return () => {
-      if (ws) {
-        ws.close();
-      }
+      // Clean up socket listeners
+      socket.off('disconnect');
+      socket.off('roomCreated');
+      socket.off('roomJoined');
+      socket.off('joinError');
+      socket.off('playerJoined');
+      socket.off('playerLeft');
+      socket.off('gameStarted');
+      socket.off('playerTurnChanged');
+      socket.off('gameEnded');
+      socket.off('error');
     };
-  }, []);
+  }, [socket]);
 
   // Glitch effect
   useEffect(() => {
