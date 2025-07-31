@@ -74,17 +74,17 @@ export default function Home() {
       setCurrentPhrases(newPhrases);
       setPhraseId(phraseId + numPhrases);
       
-      // Remove phrases after 8 seconds (reverted to original speed)
+      // Remove phrases after 3 seconds (very fast for visibility)
       setTimeout(() => {
         setCurrentPhrases([]);
-      }, 8000);
+      }, 3000);
     };
 
     // Initial show
     showPhrases();
     
-    // Set interval for showing phrases (12 seconds total: 8s display + 4s pause - original speed)
-    const interval = setInterval(showPhrases, 12000);
+    // Set interval for showing phrases (4.5 seconds total: 3s display + 1.5s pause - very fast for visibility)
+    const interval = setInterval(showPhrases, 4500);
     
     return () => clearInterval(interval);
   }, [phraseId]);
@@ -178,6 +178,13 @@ export default function Home() {
     }
   };
 
+  const removeCustomGenres = () => {
+    setActiveGenres(songGenres); // Revert to base genres
+    setCustomGenresInput(""); // Clear the textbox
+    setCurrentGenre(""); // Clear current genre
+    setShowCustomListInput(false); // Hide the input area
+  };
+
   return (
     <div className="min-h-screen bg-[#edaabb] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Retro Anime 8-bit Vaporwave Y2K Background */}
@@ -196,16 +203,17 @@ export default function Home() {
               style={{
                 left: `${phrase.x}%`,
                 top: `${phrase.y}%`,
-                fontSize: `32px`,
-                opacity: 0,
+                fontSize: `40px`,
+                opacity: 1, // Start visible instead of 0
                 color: '#000000',
                 textShadow: '2px 2px 0 #ffffff, -2px -2px 0 #ffffff, 2px -2px 0 #ffffff, -2px 2px 0 #ffffff, 3px 3px 0 #ffffff, -3px -3px 0 #ffffff',
-                animation: `glitchCharMedium 8s ease-in-out forwards`,
+                animation: `glitchChar 4s ease-in-out forwards`,
                 imageRendering: 'pixelated',
                 filter: 'blur(0.5px)',
                 transform: 'skew(0deg, 0deg)',
                 fontWeight: 'bold',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                zIndex: 5 // Ensure it's above other elements
               }}
             >
               {phrase.text}
@@ -294,13 +302,14 @@ export default function Home() {
               {/* Genre display - Windows 95 style */}
               <div className="bg-white border-2 border-t-gray-500 border-l-gray-500 border-r-gray-100 border-b-gray-100 p-4 sm:p-8 mb-6 min-h-[100px] sm:min-h-[120px] flex items-center justify-center shadow-inner">
                 {isGenerating ? (
-                  <div className="text-xl sm:text-2xl font-mono text-purple-600 animate-pulse" style={{ 
+                  <div className="text-xl sm:text-2xl font-mono text-gray-800" style={{ 
                     fontFamily: 'MS Sans Serif, sans-serif',
                     fontSize: 'clamp(16px, 3vw, 24px)',
                     imageRendering: 'pixelated',
                     textRendering: 'optimizeSpeed',
                     WebkitFontSmoothing: 'none',
-                    MozOsxFontSmoothing: 'grayscale'
+                    MozOsxFontSmoothing: 'grayscale',
+                    fontWeight: 'bold'
                   }}>
                     GENERATING...
                   </div>
@@ -407,6 +416,20 @@ export default function Home() {
                       APPLY
                     </button>
                     <button
+                      onClick={removeCustomGenres}
+                      className="bg-red-200 hover:bg-red-300 text-gray-800 font-bold py-1 px-4 border-2 border-t-red-100 border-l-red-100 border-r-red-400 border-b-red-400 active:border-t-red-400 active:border-l-red-400 active:border-r-red-100 active:border-b-red-100 transform active:translate-y-0.5 transition-all duration-150 font-mono text-sm"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: 'clamp(10px, 1.8vw, 12px)',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      REMOVE CUSTOM LIST
+                    </button>
+                    <button
                       onClick={() => {
                         setShowCustomListInput(false);
                         // Don't clear the input field - preserve it for next time
@@ -445,8 +468,7 @@ export default function Home() {
 
         {/* Retro footer */}
         <div className="text-center mt-6 text-gray-300 text-sm">
-          <div className="mb-2">Powered by Windows 95</div>
-          <div className="text-xs opacity-75">Optimized for all screen sizes</div>
+          {/* Footer text removed */}
         </div>
       </div>
 
