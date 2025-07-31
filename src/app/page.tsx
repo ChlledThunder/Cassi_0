@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { io, Socket } from "socket.io-client";
 
 const songGenres = [
   "Alternative", "Chinese", "Champagne Papi", "City Pop", "Harsh Noise", "Japanese", "Korean", "Metal", "Phonk", "Rage", "Ye Ye", "Rock", "Pop", "R&b", "Rap", "Disco", "Soul", "Trap", "Rap", "Jazz", "Ost", "Country", "Electronic", "Ambient", "Funk", "Punk", "Folk", "Classical", "I CAME TO GOON 🗣️🔥"
@@ -56,6 +57,8 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<Array<{username: string, message: string, timestamp: Date}>>([]);
   const [newMessage, setNewMessage] = useState("");
   const [currentTime, setCurrentTime] = useState("");
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connectionError, setConnectionError] = useState("");
   const startMenuRef = useRef<HTMLDivElement>(null);
 
   // Manage Japanese phrases appearance
@@ -144,6 +147,92 @@ export default function Home() {
     }
   }, []);
 
+  // Socket.IO connection and event handlers
+  useEffect(() => {
+    // Initialize socket connection
+    const newSocket = io('http://localhost:3000', {
+      transports: ['websocket', 'polling']
+    });
+    
+    setSocket(newSocket);
+    
+    // Connection event
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+      setConnectionError("");
+    });
+    
+    // Connection error
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+      setConnectionError('Failed to connect to server. Multiplayer features may not work.');
+    });
+    
+    // Room creation success
+    newSocket.on('roomCreated', (data: { roomId: string; players: any[] }) => {
+      setRoomId(data.roomId);
+      setPlayers(data.players);
+      setMultiplayerStep('lobby');
+    });
+    
+    // Room join success
+    newSocket.on('roomJoined', (data: { roomId: string; players: any[] }) => {
+      setRoomId(data.roomId);
+      setPlayers(data.players);
+      setMultiplayerStep('lobby');
+    });
+    
+    // Room join error
+    newSocket.on('joinError', (data: { message: string }) => {
+      alert(`Failed to join room: ${data.message}`);
+      setMultiplayerStep('menu');
+    });
+    
+    // Player joined event
+    newSocket.on('playerJoined', (data: { players: any[] }) => {
+      setPlayers(data.players);
+    });
+    
+    // Player left event
+    newSocket.on('playerLeft', (data: { players: any[]; message: string }) => {
+      setPlayers(data.players);
+      // You could show the message in a toast or notification
+      console.log(data.message);
+    });
+    
+    // Game started event
+    newSocket.on('gameStarted', (data: { players: any[]; currentPlayer: number }) => {
+      setPlayers(data.players);
+      setCurrentPlayer(data.currentPlayer);
+      setGameStarted(true);
+      setMultiplayerStep('game');
+    });
+    
+    // Player turn changed event
+    newSocket.on('playerTurnChanged', (data: { currentPlayer: number; players: any[] }) => {
+      setCurrentPlayer(data.currentPlayer);
+      setPlayers(data.players);
+    });
+    
+    // Game ended event
+    newSocket.on('gameEnded', (data: { players: any[] }) => {
+      setPlayers(data.players);
+      setGameStarted(false);
+      setMultiplayerStep('lobby');
+      setCurrentPlayer(0);
+    });
+    
+    // General error event
+    newSocket.on('error', (data: { message: string }) => {
+      alert(`Error: ${data.message}`);
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
   // Glitch effect
   useEffect(() => {
     const glitchOverlay = document.getElementById('glitch-overlay');
@@ -217,41 +306,59 @@ export default function Home() {
   };
 
   const createRoom = () => {
+    if (!socket || !username.trim()) {
+      alert('Please enter a username and ensure you are connected to the server');
+      return;
+    }
+    
     const newRoomId = generateRoomId();
     setRoomId(newRoomId);
-    setPlayers([{
-      username: username,
-      id: 'host-' + Date.now(),
-      isHost: true
-    }]);
-    setMultiplayerStep('lobby');
+    
+    // Emit socket event to create room
+    socket.emit('createRoom', {
+      roomId: newRoomId,
+      username: username.trim(),
+      maxPlayers: roomSize
+    });
   };
 
   const joinRoom = (roomCode: string) => {
+    if (!socket || !username.trim()) {
+      alert('Please enter a username and ensure you are connected to the server');
+      return;
+    }
+    
     setRoomId(roomCode);
-    setPlayers([...players, {
-      username: username,
-      id: 'player-' + Date.now(),
-      isHost: false
-    }]);
-    setMultiplayerStep('lobby');
+    
+    // Emit socket event to join room
+    socket.emit('joinRoom', {
+      roomId: roomCode,
+      username: username.trim()
+    });
   };
 
   const startGame = () => {
-    setGameStarted(true);
-    setMultiplayerStep('game');
-    setCurrentPlayer(0);
+    if (!socket) {
+      alert('Not connected to server');
+      return;
+    }
+    
+    // Emit socket event to start game
+    socket.emit('startGame', {
+      roomId: roomId
+    });
   };
 
   const nextPlayer = () => {
-    if (currentPlayer < players.length - 1) {
-      setCurrentPlayer(currentPlayer + 1);
-    } else {
-      // Game over, return to lobby
-      setGameStarted(false);
-      setMultiplayerStep('lobby');
-      setCurrentPlayer(0);
+    if (!socket) {
+      alert('Not connected to server');
+      return;
     }
+    
+    // Emit socket event to change player turn
+    socket.emit('nextPlayer', {
+      roomId: roomId
+    });
   };
 
   const sendMessage = () => {
@@ -595,6 +702,40 @@ export default function Home() {
           
           {/* System tray */}
           <div className="flex items-center gap-2 text-xs text-gray-700">
+            {/* Connection Status */}
+            {connectionError && (
+              <div 
+                className="bg-red-200 border border-red-400 px-2 py-0.5 cursor-pointer"
+                title={connectionError}
+              >
+                <span style={{ 
+                  fontFamily: 'MS Sans Serif, sans-serif',
+                  imageRendering: 'pixelated',
+                  textRendering: 'optimizeSpeed',
+                  WebkitFontSmoothing: 'none',
+                  MozOsxFontSmoothing: 'grayscale'
+                }}>
+                  ❌
+                </span>
+              </div>
+            )}
+            {socket && !connectionError && (
+              <div 
+                className="bg-green-200 border border-green-400 px-2 py-0.5 cursor-pointer"
+                title="Connected to server"
+              >
+                <span style={{ 
+                  fontFamily: 'MS Sans Serif, sans-serif',
+                  imageRendering: 'pixelated',
+                  textRendering: 'optimizeSpeed',
+                  WebkitFontSmoothing: 'none',
+                  MozOsxFontSmoothing: 'grayscale'
+                }}>
+                  🟢
+                </span>
+              </div>
+            )}
+            
             {/* WiFi Button */}
             <div 
               onClick={() => setShowMultiplayer(!showMultiplayer)}
