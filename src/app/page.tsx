@@ -149,87 +149,175 @@ export default function Home() {
 
   // Socket.IO connection and event handlers
   useEffect(() => {
-    // Initialize socket connection
-    const newSocket = io('http://localhost:3000', {
-      transports: ['websocket', 'polling']
-    });
+    console.log('Attempting to initialize Socket.IO connection...');
     
-    setSocket(newSocket);
+    // Try multiple connection approaches
+    let newSocket: Socket;
+    let connectionAttempt = 0;
     
-    // Connection event
-    newSocket.on('connect', () => {
-      console.log('Connected to server');
-      setConnectionError("");
-    });
+    const tryConnection = (url: string, options: any) => {
+      connectionAttempt++;
+      console.log(`Connection attempt ${connectionAttempt} to:`, url);
+      
+      try {
+        const socketInstance = io(url, options);
+        
+        socketInstance.on('connect', () => {
+          console.log(`✅ Connected to server (attempt ${connectionAttempt}) with socket ID:`, socketInstance.id);
+          setConnectionError("");
+          setSocket(socketInstance);
+        });
+        
+        socketInstance.on('connect_error', (error) => {
+          console.error(`❌ Connection error (attempt ${connectionAttempt}):`, error);
+          
+          if (connectionAttempt === 1) {
+            // Try fallback connection
+            console.log('Attempting fallback connection...');
+            tryConnection(window.location.origin, {
+              ...options,
+              transports: ['polling', 'websocket']
+            });
+          } else if (connectionAttempt === 2) {
+            // Try another fallback
+            const fallbackUrl = `${window.location.protocol}//localhost:3000`;
+            console.log('Attempting localhost fallback:', fallbackUrl);
+            tryConnection(fallbackUrl, {
+              ...options,
+              transports: ['polling', 'websocket']
+            });
+          } else {
+            setConnectionError(`Failed to connect: ${error.message}`);
+          }
+        });
+        
+        return socketInstance;
+      } catch (error) {
+        console.error(`Error creating socket instance (attempt ${connectionAttempt}):`, error);
+        if (connectionAttempt >= 3) {
+          setConnectionError('Failed to create socket connection');
+        }
+        return null;
+      }
+    };
     
-    // Connection error
-    newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-      setConnectionError('Failed to connect to server. Multiplayer features may not work.');
-    });
+    // Initial connection attempt
+    const connectionUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
+    const socketOptions = {
+      path: '/api/socketio',
+      transports: ['websocket', 'polling'],
+      timeout: 10000,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    };
     
-    // Room creation success
-    newSocket.on('roomCreated', (data: { roomId: string; players: any[] }) => {
-      setRoomId(data.roomId);
-      setPlayers(data.players);
-      setMultiplayerStep('lobby');
-    });
+    newSocket = tryConnection(connectionUrl, socketOptions);
     
-    // Room join success
-    newSocket.on('roomJoined', (data: { roomId: string; players: any[] }) => {
-      setRoomId(data.roomId);
-      setPlayers(data.players);
-      setMultiplayerStep('lobby');
-    });
+    if (!newSocket) {
+      return;
+    }
     
-    // Room join error
-    newSocket.on('joinError', (data: { message: string }) => {
-      alert(`Failed to join room: ${data.message}`);
-      setMultiplayerStep('menu');
-    });
+    // Set up event handlers that work with the connection attempt system
+    const setupSocketHandlers = (socketInstance: Socket) => {
+      // Connection event (already handled above)
+      
+      // Disconnect event
+      socketInstance.on('disconnect', (reason) => {
+        console.log('🔌 Disconnected from server:', reason);
+        setConnectionError(`Disconnected: ${reason}`);
+      });
+      
+      // Debug: Listen for all events
+      socketInstance.onAny((eventName, ...args) => {
+        if (eventName !== 'ping' && eventName !== 'pong') {
+          console.log(`[Socket Event] ${eventName}:`, args);
+        }
+      });
+      
+      // Room creation success
+      socketInstance.on('roomCreated', (data: { roomId: string; players: any[] }) => {
+        setRoomId(data.roomId);
+        setPlayers(data.players);
+        setMultiplayerStep('lobby');
+      });
+      
+      // Room join success
+      socketInstance.on('roomJoined', (data: { roomId: string; players: any[] }) => {
+        setRoomId(data.roomId);
+        setPlayers(data.players);
+        setMultiplayerStep('lobby');
+      });
+      
+      // Room join error
+      socketInstance.on('joinError', (data: { message: string }) => {
+        alert(`Failed to join room: ${data.message}`);
+        setMultiplayerStep('menu');
+      });
+      
+      // Player joined event
+      socketInstance.on('playerJoined', (data: { players: any[] }) => {
+        setPlayers(data.players);
+      });
+      
+      // Player left event
+      socketInstance.on('playerLeft', (data: { players: any[]; message: string }) => {
+        setPlayers(data.players);
+        console.log(data.message);
+      });
+      
+      // Game started event
+      socketInstance.on('gameStarted', (data: { players: any[]; currentPlayer: number }) => {
+        setPlayers(data.players);
+        setCurrentPlayer(data.currentPlayer);
+        setGameStarted(true);
+        setMultiplayerStep('game');
+      });
+      
+      // Player turn changed event
+      socketInstance.on('playerTurnChanged', (data: { currentPlayer: number; players: any[] }) => {
+        setCurrentPlayer(data.currentPlayer);
+        setPlayers(data.players);
+      });
+      
+      // Game ended event
+      socketInstance.on('gameEnded', (data: { players: any[] }) => {
+        setPlayers(data.players);
+        setGameStarted(false);
+        setMultiplayerStep('lobby');
+        setCurrentPlayer(0);
+      });
+      
+      // General error event
+      socketInstance.on('error', (data: { message: string }) => {
+        alert(`Error: ${data.message}`);
+      });
+    };
     
-    // Player joined event
-    newSocket.on('playerJoined', (data: { players: any[] }) => {
-      setPlayers(data.players);
-    });
+    // Set up handlers for the initial socket
+    setupSocketHandlers(newSocket);
     
-    // Player left event
-    newSocket.on('playerLeft', (data: { players: any[]; message: string }) => {
-      setPlayers(data.players);
-      // You could show the message in a toast or notification
-      console.log(data.message);
-    });
-    
-    // Game started event
-    newSocket.on('gameStarted', (data: { players: any[]; currentPlayer: number }) => {
-      setPlayers(data.players);
-      setCurrentPlayer(data.currentPlayer);
-      setGameStarted(true);
-      setMultiplayerStep('game');
-    });
-    
-    // Player turn changed event
-    newSocket.on('playerTurnChanged', (data: { currentPlayer: number; players: any[] }) => {
-      setCurrentPlayer(data.currentPlayer);
-      setPlayers(data.players);
-    });
-    
-    // Game ended event
-    newSocket.on('gameEnded', (data: { players: any[] }) => {
-      setPlayers(data.players);
-      setGameStarted(false);
-      setMultiplayerStep('lobby');
-      setCurrentPlayer(0);
-    });
-    
-    // General error event
-    newSocket.on('error', (data: { message: string }) => {
-      alert(`Error: ${data.message}`);
-    });
+    // Test connection after a delay
+    setTimeout(() => {
+      if (newSocket && !newSocket.connected) {
+        console.log('❌ Connection test failed - socket not connected');
+        console.log('Socket state:', {
+          connected: newSocket.connected,
+          disconnected: newSocket.disconnected,
+          id: newSocket.id
+        });
+      } else if (newSocket) {
+        console.log('✅ Connection test passed - socket is connected');
+      }
+    }, 3000);
     
     // Cleanup on unmount
     return () => {
-      newSocket.disconnect();
+      if (newSocket) {
+        newSocket.disconnect();
+      }
     };
   }, []);
 
@@ -303,6 +391,28 @@ export default function Home() {
   // Multiplayer functions
   const generateRoomId = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  const testConnection = () => {
+    if (socket) {
+      console.log('Testing connection...');
+      console.log('Socket state:', {
+        connected: socket.connected,
+        disconnected: socket.disconnected,
+        id: socket.id
+      });
+      
+      if (socket.connected) {
+        // Test emit a simple event
+        socket.emit('test', { message: 'Connection test' });
+        console.log('✅ Test event sent');
+      } else {
+        console.log('❌ Socket not connected, attempting to reconnect...');
+        socket.connect();
+      }
+    } else {
+      console.log('❌ No socket instance found');
+    }
   };
 
   const createRoom = () => {
@@ -848,9 +958,52 @@ export default function Home() {
                     Multiplayer Options
                   </h3>
                   <div className="space-y-3">
+                    {/* Connection Status Display */}
+                    <div className="bg-gray-100 p-3 border border-gray-400">
+                      <div className="text-sm font-bold mb-2" style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}>
+                        Connection Status:
+                      </div>
+                      <div className="text-xs" style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}>
+                        {socket && socket.connected ? (
+                          <span className="text-green-600">✅ Connected to server</span>
+                        ) : (
+                          <span className="text-red-600">❌ Not connected</span>
+                        )}
+                        {connectionError && (
+                          <div className="text-red-600 mt-1">{connectionError}</div>
+                        )}
+                      </div>
+                      <button
+                        onClick={testConnection}
+                        className="mt-2 w-full bg-blue-200 hover:bg-blue-300 text-gray-800 font-bold py-1 px-3 border-2 border-t-blue-100 border-l-blue-100 border-r-blue-400 border-b-blue-400 active:border-t-blue-400 active:border-l-blue-400 active:border-r-blue-100 active:border-b-blue-100 transform active:translate-y-0.5 transition-all duration-150 font-mono text-xs"
+                        style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}
+                      >
+                        Test Connection
+                      </button>
+                    </div>
+                    
                     <button
                       onClick={() => setMultiplayerStep('username')}
-                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      disabled={!socket || !socket.connected}
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ 
                         fontFamily: 'MS Sans Serif, sans-serif',
                         fontSize: '12px',
@@ -864,7 +1017,8 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => setMultiplayerStep('join')}
-                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      disabled={!socket || !socket.connected}
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ 
                         fontFamily: 'MS Sans Serif, sans-serif',
                         fontSize: '12px',
