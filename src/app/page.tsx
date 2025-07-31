@@ -1,0 +1,904 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+
+const songGenres = [
+  "Alternative", "Chinese", "Champagne Papi", "City Pop", "Harsh Noise", "Japanese", "Korean", "Metal", "Phonk", "Rage", "Ye Ye", "Rock", "Pop", "R&b", "Rap", "Disco", "Soul", "Trap", "Rap", "Jazz", "Ost", "Country", "Electronic", "Ambient", "Funk", "Punk", "Folk", "Classical", "I CAME TO GOON 🗣️🔥"
+];
+
+const japanesePhrases = [
+  "電脳空間", "サイバーパンク", "未来都市", "デジタル夢", "バーチャル現実",
+  "メタバース", "AI時代", "テクノロジー", "コンピューター", "インターネット",
+  "デジタル世界", "仮想現実", "電子の海", "情報社会", "ネットワーク",
+  "データストリーム", "コードの森", "アルゴリズム", "プログラム", "ソフトウェア",
+  "ハードウェア", "システム", "インターフェース", "データベース", "サーバー",
+  "クライアント", "プロトコル", "ファイアウォール", "暗号化", "セキュリティ",
+  "ハッカー", "プログラマー", "デベロッパー", "ユーザー", "アカウント",
+  "パスワード", "ログイン", "ログアウト", "オンライン", "オフライン",
+  "クラウド", "ストレージ", "メモリ", "プロセッサ", "グラフィック",
+  "ディスプレイ", "キーボード", "マウス", "ウィンドウ", "アイコン",
+  "メニュー", "ツールバー", "ステータスバー", "デスクトップ", "フォルダ",
+  "ファイル", "ドキュメント", "アプリケーション", "ブラウザ", "ウェブサイト",
+  "ホームページ", "リンク", "ブックマーク", "検索", "ダウンロード",
+  "アップロード", "保存", "削除", "コピー", "ペースト",
+  "カット", "元に戻す", "やり直し", "設定", "オプション",
+  "環境設定", "カスタマイズ", "テーマ", "色", "フォント",
+  "サイズ", "位置", "配置", "起動", "終了",
+  "再起動", "スリープ", "休止", "エラー", "警告",
+  "メッセージ", "通知", "アラート", "成功", "失敗",
+  "進行中", "完了", "キャンセル", "はい", "いいえ",
+  "適用", "閉じる"
+];
+
+const getRandomJapanesePhrase = () => {
+  return japanesePhrases[Math.floor(Math.random() * japanesePhrases.length)];
+};
+
+export default function Home() {
+  const [currentGenre, setCurrentGenre] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [currentPhrases, setCurrentPhrases] = useState<Array<{text: string, id: number, x: number, y: number}>>([]);
+  const [phraseId, setPhraseId] = useState(0);
+  const [showCustomListInput, setShowCustomListInput] = useState(false);
+  const [customGenresInput, setCustomGenresInput] = useState("");
+  const [activeGenres, setActiveGenres] = useState(songGenres);
+  const [showStartMenu, setShowStartMenu] = useState(false);
+  const [currentTime, setCurrentTime] = useState("");
+  const startMenuRef = useRef<HTMLDivElement>(null);
+
+  // Manage Japanese phrases appearance
+  useEffect(() => {
+    const showPhrases = () => {
+      const numPhrases = Math.floor(Math.random() * 3) + 1; // 1-3 phrases
+      const newPhrases = [];
+      
+      for (let i = 0; i < numPhrases; i++) {
+        // Avoid center area where generator window is (roughly 30-70% horizontal, 20-80% vertical)
+        let x, y;
+        do {
+          x = Math.random() * 90 + 5; // 5-95%
+          y = Math.random() * 90 + 5; // 5-95%
+        } while (
+          (x > 25 && x < 75 && y > 15 && y < 85) // Avoid center window area
+        );
+        
+        newPhrases.push({
+          text: getRandomJapanesePhrase(),
+          id: phraseId + i,
+          x: x,
+          y: y
+        });
+      }
+      
+      setCurrentPhrases(newPhrases);
+      setPhraseId(phraseId + numPhrases);
+      
+      // Remove phrases after 8 seconds (reverted to original speed)
+      setTimeout(() => {
+        setCurrentPhrases([]);
+      }, 8000);
+    };
+
+    // Initial show
+    showPhrases();
+    
+    // Set interval for showing phrases (12 seconds total: 8s display + 4s pause - original speed)
+    const interval = setInterval(showPhrases, 12000);
+    
+    return () => clearInterval(interval);
+  }, [phraseId]);
+
+  // Update time every second
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      setCurrentTime(timeString);
+    };
+
+    updateTime();
+    const timeInterval = setInterval(updateTime, 1000);
+    return () => clearInterval(timeInterval);
+  }, []);
+
+  // Handle clicks outside start menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (startMenuRef.current && !startMenuRef.current.contains(event.target as Node)) {
+        setShowStartMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Glitch effect
+  useEffect(() => {
+    const glitchOverlay = document.getElementById('glitch-overlay');
+    if (glitchOverlay) {
+      const glitchInterval = setInterval(() => {
+        if (Math.random() > 0.98) { // Less frequent glitching
+          glitchOverlay.style.opacity = '1';
+          glitchOverlay.style.background = `linear-gradient(${Math.random() * 360}deg, 
+            rgba(255,0,255,${Math.random() * 0.3}) 0%, 
+            rgba(0,255,255,${Math.random() * 0.3}) 50%, 
+            rgba(255,255,0,${Math.random() * 0.3}) 100%)`;
+          glitchOverlay.style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
+          
+          setTimeout(() => {
+            glitchOverlay.style.opacity = '0';
+            glitchOverlay.style.transform = 'translate(0, 0)';
+          }, 150); // Slightly longer glitch
+        }
+      }, 300); // Slower interval
+
+      return () => clearInterval(glitchInterval);
+    }
+  }, []);
+
+  // Fisher-Yates shuffle algorithm
+  const fisherYatesShuffle = (array: string[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  const generateRandomGenre = () => {
+    setIsGenerating(true);
+    
+    // Add some animation delay for effect
+    setTimeout(() => {
+      const shuffledGenres = fisherYatesShuffle(activeGenres);
+      setCurrentGenre(shuffledGenres[0]); // Take first element from shuffled array
+      setIsGenerating(false);
+    }, 500);
+  };
+
+  const applyCustomGenres = () => {
+    if (customGenresInput.trim()) {
+      const genres = customGenresInput.split(',').map(genre => genre.trim()).filter(genre => genre.length > 0);
+      if (genres.length > 0) {
+        setActiveGenres(genres);
+        setCurrentGenre(""); // Clear current genre when switching lists
+        // Don't clear the input field or hide the input area - keep it visible
+      }
+    } else {
+      // If input is empty, revert to base genres
+      setActiveGenres(songGenres);
+      setCurrentGenre(""); // Clear current genre when switching lists
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#edaabb] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Retro Anime 8-bit Vaporwave Y2K Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Base gradient with 8-bit style */}
+        <div className="absolute inset-0 bg-[#edaabb]"></div>
+        
+
+        
+        {/* Glitching Japanese phrases */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {currentPhrases.map((phrase) => (
+            <div 
+              key={phrase.id}
+              className="absolute font-mono"
+              style={{
+                left: `${phrase.x}%`,
+                top: `${phrase.y}%`,
+                fontSize: `32px`,
+                opacity: 0,
+                color: '#000000',
+                textShadow: '2px 2px 0 #ffffff, -2px -2px 0 #ffffff, 2px -2px 0 #ffffff, -2px 2px 0 #ffffff, 3px 3px 0 #ffffff, -3px -3px 0 #ffffff',
+                animation: `glitchCharMedium 8s ease-in-out forwards`,
+                imageRendering: 'pixelated',
+                filter: 'blur(0.5px)',
+                transform: 'skew(0deg, 0deg)',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {phrase.text}
+            </div>
+          ))}
+        </div>
+        
+
+        
+
+        
+
+      </div>
+
+      {/* CRT scanlines effect */}
+      <div className="absolute inset-0 pointer-events-none z-40" style={{
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px)`,
+        backgroundSize: '100% 4px',
+        animation: 'scanlines 8s linear infinite'
+      }}></div>
+      
+  
+      
+      {/* Glitch effect overlay */}
+      <div className="absolute inset-0 pointer-events-none z-15" id="glitch-overlay"></div>
+      
+
+
+
+
+      {/* Main content */}
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-4 pb-20"> {/* Added pb-20 for taskbar space */}
+        {/* Windows 95 style window */}
+        <div className="bg-gray-300 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-500 border-b-gray-500 shadow-2xl w-full">
+          {/* Title bar */}
+          <div className="bg-gradient-to-b from-blue-900 to-blue-700 text-white px-2 sm:px-4 py-2 flex items-center justify-between">
+            <div className="w-6 sm:w-8"></div>
+            <div className="text-xs sm:text-sm font-bold tracking-wide font-mono flex-1 text-center" style={{ 
+              textShadow: '1px 1px 0px rgba(0,0,0,0.5)',
+              imageRendering: 'pixelated',
+              fontFamily: 'MS Sans Serif, sans-serif'
+            }}>
+              Cassi Rates Everything Zero
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-300 border-2 border-t-white border-l-white border-r-gray-500 border-b-gray-500 flex items-center justify-center text-black text-sm sm:text-lg font-bold cursor-pointer hover:bg-gray-400 active:border-t-gray-500 active:border-l-gray-500 active:border-r-white active:border-b-white transform active:translate-y-0.5 transition-all duration-150">
+                _
+              </div>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-300 border-2 border-t-white border-l-white border-r-gray-500 border-b-gray-500 flex items-center justify-center text-black text-sm sm:text-lg font-bold cursor-pointer hover:bg-gray-400 active:border-t-gray-500 active:border-l-gray-500 active:border-r-white active:border-b-white transform active:translate-y-0.5 transition-all duration-150">
+                □
+              </div>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-300 border-2 border-t-white border-l-white border-r-gray-500 border-b-gray-500 flex items-center justify-center text-black text-sm sm:text-lg font-bold cursor-pointer hover:bg-gray-400 active:border-t-gray-500 active:border-l-gray-500 active:border-r-white active:border-b-white transform active:translate-y-0.5 transition-all duration-150">
+                ×
+              </div>
+            </div>
+          </div>
+
+          {/* Window content */}
+          <div className="p-4 sm:p-6 bg-gray-200">
+            {/* Main content area - Windows 95 style */}
+            <div className="bg-gray-300 border-2 border-t-gray-500 border-l-gray-500 border-r-gray-100 border-b-gray-100 p-4 sm:p-6 mb-6 shadow-inner">
+              <div className="text-center mb-6">
+                <p className="text-gray-700 mb-4 font-mono text-sm sm:text-base" style={{ 
+                  fontFamily: 'MS Sans Serif, sans-serif',
+                  fontSize: 'clamp(12px, 2vw, 14px)',
+                  fontWeight: 'bold',
+                  imageRendering: 'pixelated',
+                  textRendering: 'optimizeSpeed',
+                  WebkitFontSmoothing: 'none',
+                  MozOsxFontSmoothing: 'grayscale'
+                }}>
+                  Welcome to the ultimate genre generator!
+                </p>
+                <p className="text-sm text-gray-500 font-mono text-xs sm:text-sm" style={{ 
+                  fontFamily: 'MS Sans Serif, sans-serif',
+                  fontSize: 'clamp(10px, 1.8vw, 12px)',
+                  imageRendering: 'pixelated',
+                  textRendering: 'optimizeSpeed',
+                  WebkitFontSmoothing: 'none',
+                  MozOsxFontSmoothing: 'grayscale'
+                }}>
+                  Click the button below to generate a random song genre
+                </p>
+              </div>
+
+              {/* Genre display - Windows 95 style */}
+              <div className="bg-white border-2 border-t-gray-500 border-l-gray-500 border-r-gray-100 border-b-gray-100 p-4 sm:p-8 mb-6 min-h-[100px] sm:min-h-[120px] flex items-center justify-center shadow-inner">
+                {isGenerating ? (
+                  <div className="text-xl sm:text-2xl font-mono text-purple-600 animate-pulse" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    fontSize: 'clamp(16px, 3vw, 24px)',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    GENERATING...
+                  </div>
+                ) : currentGenre ? (
+                  <div className="text-center">
+                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2 font-mono" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      fontSize: 'clamp(18px, 4vw, 32px)',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      {currentGenre}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-center font-mono" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    fontSize: 'clamp(14px, 2.5vw, 16px)',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    <div>No genre generated yet</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Generate buttons - Windows 95 style */}
+              <div className="text-center flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={generateRandomGenre}
+                  disabled={isGenerating}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 sm:px-6 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                  style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    fontSize: 'clamp(11px, 2vw, 12px)',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}
+                >
+                  {isGenerating ? (
+                    <span>
+                      PROCESSING...
+                    </span>
+                  ) : (
+                    <span>
+                      GENERATE GENRE
+                    </span>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => setShowCustomListInput(!showCustomListInput)}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 sm:px-6 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono text-sm sm:text-base"
+                  style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    fontSize: 'clamp(11px, 2vw, 12px)',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}
+                >
+                  ADD CUSTOM LIST
+                </button>
+              </div>
+              
+              {/* Custom list input area */}
+              {showCustomListInput && (
+                <div className="mt-6 bg-gray-100 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 p-4">
+                  <textarea
+                    value={customGenresInput}
+                    onChange={(e) => setCustomGenresInput(e.target.value)}
+                    placeholder="Enter genres separated by commas..."
+                    className="w-full p-2 border border-gray-400 bg-white text-gray-800 font-mono text-sm resize-none"
+                    rows={4}
+                    style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      fontSize: 'clamp(11px, 2vw, 12px)',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}
+                  />
+                  <div className="flex flex-col sm:flex-row gap-2 mt-2 justify-center">
+                    <button
+                      onClick={applyCustomGenres}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono text-sm"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: 'clamp(10px, 1.8vw, 12px)',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      APPLY
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowCustomListInput(false);
+                        // Don't clear the input field - preserve it for next time
+                      }}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono text-sm"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: 'clamp(10px, 1.8vw, 12px)',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Status bar */}
+            <div className="bg-gray-300 border-t border-gray-400 px-4 py-1 flex justify-between items-center text-xs text-gray-600 font-mono" style={{ 
+              fontFamily: 'MS Sans Serif, sans-serif',
+              imageRendering: 'pixelated',
+              textRendering: 'optimizeSpeed',
+              WebkitFontSmoothing: 'none',
+              MozOsxFontSmoothing: 'grayscale'
+            }}>
+              <div>Ready</div>
+              <div>Genres: {activeGenres.length}</div>
+              <div>© 2024</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Retro footer */}
+        <div className="text-center mt-6 text-gray-300 text-sm">
+          <div className="mb-2">Powered by Windows 95</div>
+          <div className="text-xs opacity-75">Optimized for all screen sizes</div>
+        </div>
+      </div>
+
+      {/* Windows 95 Start Menu */}
+      <div className="fixed bottom-0 left-0 right-0 z-30">
+        {/* Taskbar */}
+        <div className="bg-gray-300 h-8 border-t-2 border-t-gray-100 border-l-gray-100 border-r-gray-500 border-b-gray-500 flex items-center px-2">
+          {/* Start Button */}
+          <div className="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 mr-2 border-t-2 border-t-green-300 border-l-green-300 border-r-green-700 border-b-green-700 active:border-t-green-700 active:border-l-green-700 active:border-r-green-300 active:border-b-green-300 transform active:translate-y-0.5 transition-all duration-150 cursor-pointer flex items-center gap-1">
+            <span className="text-xs font-mono" style={{ 
+              fontFamily: 'MS Sans Serif, sans-serif',
+              imageRendering: 'pixelated',
+              textRendering: 'optimizeSpeed',
+              WebkitFontSmoothing: 'none',
+              MozOsxFontSmoothing: 'grayscale'
+            }}>
+              Start
+            </span>
+          </div>
+          
+          {/* Taskbar items */}
+          <div className="flex-1 flex items-center gap-1">
+            <div className="bg-gray-200 border border-gray-400 px-2 py-1 text-xs text-gray-700 font-mono flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-500"></div>
+              <span style={{ 
+                fontFamily: 'MS Sans Serif, sans-serif',
+                imageRendering: 'pixelated',
+                textRendering: 'optimizeSpeed',
+                WebkitFontSmoothing: 'none',
+                MozOsxFontSmoothing: 'grayscale'
+              }}>
+                Cassi Rates Everything Zero
+              </span>
+            </div>
+          </div>
+          
+          {/* System tray */}
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <div className="bg-gray-200 border border-gray-400 px-2 py-0.5">
+              <span style={{ 
+                fontFamily: 'MS Sans Serif, sans-serif',
+                imageRendering: 'pixelated',
+                textRendering: 'optimizeSpeed',
+                WebkitFontSmoothing: 'none',
+                MozOsxFontSmoothing: 'grayscale'
+              }}>
+                {currentTime}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom animations */}
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.2; transform: scale(1); }
+          50% { opacity: 0.3; transform: scale(1.05); }
+        }
+        .animate-pulse {
+          animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .animation-delay-1000 {
+          animation-delay: 1s;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-3000 {
+          animation-delay: 3s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+        .animation-delay-500 {
+          animation-delay: 0.5s;
+        }
+        .animation-delay-1500 {
+          animation-delay: 1.5s;
+        }
+        .animation-delay-6000 {
+          animation-delay: 6s;
+        }
+        
+        @keyframes scanlines {
+          0% { background-position: 0 0; }
+          100% { background-position: 0 10px; }
+        }
+        
+        @keyframes float {
+          0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+          10% { opacity: 0.2; }
+          90% { opacity: 0.2; }
+          100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+        
+        @keyframes glitch {
+          0%, 100% { 
+            transform: translate(0, 0); 
+            filter: hue-rotate(0deg);
+            text-shadow: 0 0 0 rgba(255,0,255,0.5);
+          }
+          20% { 
+            transform: translate(-2px, 2px); 
+            filter: hue-rotate(90deg);
+            text-shadow: -2px 0 rgba(255,0,255,0.5), 2px 0 rgba(0,255,255,0.5);
+          }
+          40% { 
+            transform: translate(-2px, -2px); 
+            filter: hue-rotate(180deg);
+            text-shadow: 2px 0 rgba(255,0,255,0.5), -2px 0 rgba(0,255,255,0.5);
+          }
+          60% { 
+            transform: translate(2px, 2px); 
+            filter: hue-rotate(270deg);
+            text-shadow: 0 0 10px rgba(255,255,0,0.5);
+          }
+          80% { 
+            transform: translate(2px, -2px); 
+            filter: hue-rotate(360deg);
+            text-shadow: -2px 0 rgba(0,255,255,0.5), 2px 0 rgba(255,0,255,0.5);
+          }
+        }
+        
+        @keyframes glitchChar {
+          0% { 
+            opacity: 0; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          5% { 
+            opacity: 1; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          10% { 
+            opacity: 0.7; 
+            transform: translate(-3px, 2px) skew(-3deg, 2deg);
+            filter: blur(1.5px) hue-rotate(90deg);
+          }
+          15% { 
+            opacity: 1; 
+            transform: translate(3px, -2px) skew(2deg, -3deg);
+            filter: blur(1px) hue-rotate(180deg);
+          }
+          20% { 
+            opacity: 0.4; 
+            transform: translate(-2px, 0) skew(-2deg, 0deg);
+            filter: blur(2px) hue-rotate(270deg);
+          }
+          25% { 
+            opacity: 0.9; 
+            transform: translate(2px, 0) skew(3deg, 1deg);
+            filter: blur(0.5px) hue-rotate(360deg);
+          }
+          30% { 
+            opacity: 0.3; 
+            transform: translate(0, -2px) skew(0deg, -2deg);
+            filter: blur(1.8px) hue-rotate(45deg);
+          }
+          35% { 
+            opacity: 1; 
+            transform: translate(0, 2px) skew(-2deg, 0deg);
+            filter: blur(0.8px) hue-rotate(135deg);
+          }
+          40% { 
+            opacity: 0.5; 
+            transform: translate(-2px, 0) skew(2deg, 3deg);
+            filter: blur(2.2px) hue-rotate(225deg);
+          }
+          45% { 
+            opacity: 0.8; 
+            transform: translate(2px, 0) skew(-3deg, -2deg);
+            filter: blur(0.6px) hue-rotate(315deg);
+          }
+          50% { 
+            opacity: 0.2; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(1.5px) hue-rotate(0deg);
+          }
+          55% { 
+            opacity: 0.9; 
+            transform: translate(-3px, 0) skew(4deg, 0deg);
+            filter: blur(1px) hue-rotate(90deg);
+          }
+          60% { 
+            opacity: 0.4; 
+            transform: translate(3px, 0) skew(-4deg, 0deg);
+            filter: blur(1.8px) hue-rotate(180deg);
+          }
+          65% { 
+            opacity: 1; 
+            transform: translate(-1px, 0) skew(2deg, 2deg);
+            filter: blur(0.7px) hue-rotate(270deg);
+          }
+          70% { 
+            opacity: 0.3; 
+            transform: translate(1px, 0) skew(-2deg, -2deg);
+            filter: blur(2px) hue-rotate(360deg);
+          }
+          75% { 
+            opacity: 0.7; 
+            transform: translate(0, -2px) skew(0deg, 3deg);
+            filter: blur(1.2px) hue-rotate(45deg);
+          }
+          80% { 
+            opacity: 0.4; 
+            transform: translate(0, 2px) skew(0deg, -3deg);
+            filter: blur(1.8px) hue-rotate(135deg);
+          }
+          85% { 
+            opacity: 0.6; 
+            transform: translate(-2px, 0) skew(3deg, 0deg);
+            filter: blur(1px) hue-rotate(225deg);
+          }
+          90% { 
+            opacity: 0.2; 
+            transform: translate(2px, 0) skew(-3deg, 0deg);
+            filter: blur(1.5px) hue-rotate(315deg);
+          }
+          95% { 
+            opacity: 0.1; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(1px) hue-rotate(0deg);
+          }
+          100% { 
+            opacity: 0; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+        }
+        
+        @keyframes gridMove {
+          0% { transform: translate(0, 0); }
+          100% { transform: translate(30px, 30px); }
+        }
+        
+        @keyframes stripeMove {
+          0% { transform: translate(0, 0); }
+          100% { transform: translate(50px, 50px); }
+        }
+        
+        @keyframes floatDot {
+          0% { transform: translateY(100vh) scale(0); opacity: 0; }
+          10% { opacity: 0.1; transform: translateY(90vh) scale(1); }
+          90% { opacity: 0.1; transform: translateY(10vh) scale(1); }
+          100% { transform: translateY(0) scale(0); opacity: 0; }
+        }
+        
+        @keyframes glitchCharSlow {
+          0% { 
+            opacity: 0; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          2% { 
+            opacity: 0.1; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          4% { 
+            opacity: 0.3; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          6% { 
+            opacity: 0.6; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          8% { 
+            opacity: 0.8; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          10% { 
+            opacity: 1; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+          15% { 
+            opacity: 0.9; 
+            transform: translate(-1px, 1px) skew(-1deg, 1deg);
+            filter: blur(0.8px) hue-rotate(30deg);
+          }
+          20% { 
+            opacity: 1; 
+            transform: translate(1px, -1px) skew(1deg, -1deg);
+            filter: blur(0.6px) hue-rotate(60deg);
+          }
+          25% { 
+            opacity: 0.85; 
+            transform: translate(-1px, 0) skew(-1deg, 0deg);
+            filter: blur(1px) hue-rotate(90deg);
+          }
+          30% { 
+            opacity: 0.95; 
+            transform: translate(1px, 0) skew(1deg, 0.5deg);
+            filter: blur(0.7px) hue-rotate(120deg);
+          }
+          35% { 
+            opacity: 0.8; 
+            transform: translate(0, -1px) skew(0deg, -1deg);
+            filter: blur(1.2px) hue-rotate(150deg);
+          }
+          40% { 
+            opacity: 0.98; 
+            transform: translate(0, 1px) skew(-1deg, 0deg);
+            filter: blur(0.8px) hue-rotate(180deg);
+          }
+          45% { 
+            opacity: 0.85; 
+            transform: translate(-1px, 0) skew(1deg, 1deg);
+            filter: blur(1px) hue-rotate(210deg);
+          }
+          50% { 
+            opacity: 0.95; 
+            transform: translate(1px, 0) skew(-1deg, -1deg);
+            filter: blur(0.6px) hue-rotate(240deg);
+          }
+          55% { 
+            opacity: 0.8; 
+            transform: translate(0, -1px) skew(0.5deg, -0.5deg);
+            filter: blur(1.1px) hue-rotate(270deg);
+          }
+          60% { 
+            opacity: 0.96; 
+            transform: translate(0, 1px) skew(-0.5deg, 0.5deg);
+            filter: blur(0.7px) hue-rotate(300deg);
+          }
+          65% { 
+            opacity: 0.85; 
+            transform: translate(-1px, 0) skew(1deg, 0deg);
+            filter: blur(0.9px) hue-rotate(330deg);
+          }
+          70% { 
+            opacity: 0.95; 
+            transform: translate(1px, 0) skew(-1deg, 0deg);
+            filter: blur(0.6px) hue-rotate(360deg);
+          }
+          75% { 
+            opacity: 0.8; 
+            transform: translate(0, -1px) skew(0deg, -1deg);
+            filter: blur(1.3px) hue-rotate(30deg);
+          }
+          80% { 
+            opacity: 0.9; 
+            transform: translate(0, 1px) skew(0deg, 1deg);
+            filter: blur(0.8px) hue-rotate(60deg);
+          }
+          82% { 
+            opacity: 0.7; 
+            transform: translate(-1px, 0) skew(-1deg, 0deg);
+            filter: blur(1.5px) hue-rotate(90deg);
+          }
+          84% { 
+            opacity: 0.5; 
+            transform: translate(1px, 0) skew(1deg, 0deg);
+            filter: blur(1.2px) hue-rotate(120deg);
+          }
+          86% { 
+            opacity: 0.3; 
+            transform: translate(0, -1px) skew(0deg, -1deg);
+            filter: blur(1.8px) hue-rotate(150deg);
+          }
+          88% { 
+            opacity: 0.2; 
+            transform: translate(0, 1px) skew(0deg, 1deg);
+            filter: blur(2px) hue-rotate(180deg);
+          }
+          90% { 
+            opacity: 0.1; 
+            transform: translate(-0.5px, 0) skew(-0.5deg, 0deg);
+            filter: blur(2.2px) hue-rotate(210deg);
+          }
+          92% { 
+            opacity: 0.05; 
+            transform: translate(0.5px, 0) skew(0.5deg, 0deg);
+            filter: blur(2.4px) hue-rotate(240deg);
+          }
+          94% { 
+            opacity: 0.02; 
+            transform: translate(0, -0.5px) skew(0deg, -0.5deg);
+            filter: blur(2.6px) hue-rotate(270deg);
+          }
+          96% { 
+            opacity: 0.01; 
+            transform: translate(0, 0.5px) skew(0deg, 0.5deg);
+            filter: blur(2.8px) hue-rotate(300deg);
+          }
+          98% { 
+            opacity: 0.005; 
+            transform: translate(-0.5px, 0) skew(-0.5deg, 0deg);
+            filter: blur(3px) hue-rotate(330deg);
+          }
+          100% { 
+            opacity: 0; 
+            transform: translate(0, 0) skew(0deg, 0deg);
+            filter: blur(0.5px) hue-rotate(0deg);
+          }
+        }
+        
+        @keyframes spin-slow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes spin-slow-reverse {
+          0% { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
+        
+        .animate-spin-slow {
+          animation: spin-slow 20s linear infinite;
+        }
+        
+        .animate-spin-slow-reverse {
+          animation: spin-slow-reverse 25s linear infinite;
+        }
+        
+        #glitch-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          opacity: 0;
+          transition: all 0.1s ease;
+          mix-blend-mode: overlay;
+          z-index: 15;
+        }
+        
+        /* CRT flicker effect */
+        @keyframes flicker {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.98; }
+        }
+        
+        body {
+          animation: flicker 0.1s infinite;
+        }
+        
+        /* Text shadow glitch effect for headers */
+        .glitch-text {
+          text-shadow: 
+            2px 2px 0px rgba(255,0,255,0.5),
+            -2px -2px 0px rgba(0,255,255,0.5),
+            0px 0px 10px rgba(255,255,0,0.3);
+          animation: glitch 3s infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
