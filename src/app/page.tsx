@@ -44,6 +44,16 @@ export default function Home() {
   const [customGenresInput, setCustomGenresInput] = useState("");
   const [activeGenres, setActiveGenres] = useState(songGenres);
   const [showStartMenu, setShowStartMenu] = useState(false);
+  const [showMultiplayer, setShowMultiplayer] = useState(false);
+  const [multiplayerStep, setMultiplayerStep] = useState<'menu' | 'username' | 'create' | 'lobby' | 'game'>('menu');
+  const [username, setUsername] = useState("");
+  const [roomSize, setRoomSize] = useState(2);
+  const [roomId, setRoomId] = useState("");
+  const [players, setPlayers] = useState<Array<{username: string, id: string, isHost: boolean}>>([]);
+  const [currentPlayer, setCurrentPlayer] = useState(0);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{username: string, message: string, timestamp: Date}>>([]);
+  const [newMessage, setNewMessage] = useState("");
   const [currentTime, setCurrentTime] = useState("");
   const startMenuRef = useRef<HTMLDivElement>(null);
 
@@ -109,7 +119,11 @@ export default function Home() {
   // Handle clicks outside start menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (startMenuRef.current && !startMenuRef.current.contains(event.target as Node)) {
+      // Check if the click is on the Start button itself
+      const startButton = event.target as Element;
+      const isStartButton = startButton.closest('[data-start-button="true"]');
+      
+      if (startMenuRef.current && !startMenuRef.current.contains(event.target as Node) && !isStartButton) {
         setShowStartMenu(false);
       }
     };
@@ -183,6 +197,64 @@ export default function Home() {
     setCustomGenresInput(""); // Clear the textbox
     setCurrentGenre(""); // Clear current genre
     setShowCustomListInput(false); // Hide the input area
+  };
+
+  // Multiplayer functions
+  const generateRoomId = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  const createRoom = () => {
+    const newRoomId = generateRoomId();
+    setRoomId(newRoomId);
+    setPlayers([{
+      username: username,
+      id: 'host-' + Date.now(),
+      isHost: true
+    }]);
+    setMultiplayerStep('lobby');
+  };
+
+  const joinRoom = (roomCode: string) => {
+    setRoomId(roomCode);
+    setPlayers([...players, {
+      username: username,
+      id: 'player-' + Date.now(),
+      isHost: false
+    }]);
+    setMultiplayerStep('lobby');
+  };
+
+  const startGame = () => {
+    setGameStarted(true);
+    setMultiplayerStep('game');
+    setCurrentPlayer(0);
+  };
+
+  const nextPlayer = () => {
+    if (currentPlayer < players.length - 1) {
+      setCurrentPlayer(currentPlayer + 1);
+    } else {
+      // Game over, return to lobby
+      setGameStarted(false);
+      setMultiplayerStep('lobby');
+      setCurrentPlayer(0);
+    }
+  };
+
+  const sendMessage = () => {
+    if (newMessage.trim()) {
+      setChatMessages([...chatMessages, {
+        username: username,
+        message: newMessage,
+        timestamp: new Date()
+      }]);
+      setNewMessage("");
+    }
+  };
+
+  const getRoomLink = () => {
+    return `${window.location.origin}?room=${roomId}`;
   };
 
   return (
@@ -477,7 +549,11 @@ export default function Home() {
         {/* Taskbar */}
         <div className="bg-gray-300 h-8 border-t-2 border-t-gray-100 border-l-gray-100 border-r-gray-500 border-b-gray-500 flex items-center px-2">
           {/* Start Button */}
-          <div className="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 mr-2 border-t-2 border-t-green-300 border-l-green-300 border-r-green-700 border-b-green-700 active:border-t-green-700 active:border-l-green-700 active:border-r-green-300 active:border-b-green-300 transform active:translate-y-0.5 transition-all duration-150 cursor-pointer flex items-center gap-1">
+          <div 
+            data-start-button="true"
+            onClick={() => setShowStartMenu(!showStartMenu)}
+            className="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 mr-2 border-t-2 border-t-green-300 border-l-green-300 border-r-green-700 border-b-green-700 active:border-t-green-700 active:border-l-green-700 active:border-r-green-300 active:border-b-green-300 transform active:translate-y-0.5 transition-all duration-150 cursor-pointer flex items-center gap-1"
+          >
             <span className="text-xs font-mono" style={{ 
               fontFamily: 'MS Sans Serif, sans-serif',
               imageRendering: 'pixelated',
@@ -507,6 +583,22 @@ export default function Home() {
           
           {/* System tray */}
           <div className="flex items-center gap-2 text-xs text-gray-700">
+            {/* WiFi Button */}
+            <div 
+              onClick={() => setShowMultiplayer(!showMultiplayer)}
+              className="bg-gray-200 border border-gray-400 px-2 py-0.5 cursor-pointer hover:bg-gray-300 transition-colors duration-150"
+              title="Multiplayer"
+            >
+              <span style={{ 
+                fontFamily: 'MS Sans Serif, sans-serif',
+                imageRendering: 'pixelated',
+                textRendering: 'optimizeSpeed',
+                WebkitFontSmoothing: 'none',
+                MozOsxFontSmoothing: 'grayscale'
+              }}>
+                📶
+              </span>
+            </div>
             <div className="bg-gray-200 border border-gray-400 px-2 py-0.5">
               <span style={{ 
                 fontFamily: 'MS Sans Serif, sans-serif',
@@ -520,7 +612,522 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Windows 95 Start Menu Dropdown */}
+        {showStartMenu && (
+          <div 
+            ref={startMenuRef}
+            className="absolute bottom-8 left-0 bg-gray-300 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-500 border-b-gray-500 shadow-lg w-64"
+            style={{
+              fontFamily: 'MS Sans Serif, sans-serif',
+              imageRendering: 'pixelated',
+              textRendering: 'optimizeSpeed',
+              WebkitFontSmoothing: 'none',
+              MozOsxFontSmoothing: 'grayscale'
+            }}
+          >
+            {/* Start Menu Header */}
+            <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-2 text-sm font-bold">
+              Cassi_0 OS
+            </div>
+            
+            {/* Menu Items */}
+            <div className="py-1">
+              {/* Settings Option */}
+              <div 
+                className="flex items-center px-4 py-2 hover:bg-blue-500 hover:text-white cursor-pointer transition-colors duration-150"
+                onClick={() => {
+                  // Handle settings click
+                  setShowStartMenu(false);
+                }}
+              >
+                <div className="w-6 h-6 mr-3 flex items-center justify-center">
+                  <div className="w-4 h-4 border border-gray-600 bg-gray-200 flex items-center justify-center text-xs">
+                    ⚙
+                  </div>
+                </div>
+                <span className="text-sm font-medium">Settings</span>
+              </div>
+              
+              {/* Separator Line */}
+              <div className="border-t border-gray-400 my-1 mx-2"></div>
+              
+              {/* Additional menu items can be added here */}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Multiplayer Interface */}
+      {showMultiplayer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-300 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-500 border-b-gray-500 shadow-2xl w-96 max-w-full mx-4">
+            {/* Multiplayer Header */}
+            <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-2 flex items-center justify-between">
+              <div className="text-sm font-bold" style={{ 
+                fontFamily: 'MS Sans Serif, sans-serif',
+                imageRendering: 'pixelated',
+                textRendering: 'optimizeSpeed',
+                WebkitFontSmoothing: 'none',
+                MozOsxFontSmoothing: 'grayscale'
+              }}>
+                Multiplayer Mode
+              </div>
+              <div 
+                onClick={() => setShowMultiplayer(false)}
+                className="w-6 h-6 bg-gray-200 border border-gray-400 flex items-center justify-center text-black text-xs font-bold cursor-pointer hover:bg-gray-300"
+              >
+                ×
+              </div>
+            </div>
+
+            {/* Multiplayer Content */}
+            <div className="p-4">
+              {multiplayerStep === 'menu' && (
+                <div className="text-center">
+                  <h3 className="text-lg font-bold mb-4" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    Multiplayer Options
+                  </h3>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setMultiplayerStep('username')}
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Create Room
+                    </button>
+                    <button
+                      onClick={() => setMultiplayerStep('username')}
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Join Room
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {multiplayerStep === 'username' && (
+                <div className="text-center">
+                  <h3 className="text-lg font-bold mb-4" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    Enter Username
+                  </h3>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your username..."
+                    className="w-full p-2 border border-gray-400 bg-white text-gray-800 font-mono text-sm mb-4"
+                    style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      fontSize: '12px',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setMultiplayerStep('menu')}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => setMultiplayerStep('create')}
+                      disabled={!username.trim()}
+                      className="flex-1 bg-blue-200 hover:bg-blue-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-blue-100 border-l-blue-100 border-r-blue-400 border-b-blue-400 active:border-t-blue-400 active:border-l-blue-400 active:border-r-blue-100 active:border-b-blue-100 transform active:translate-y-0.5 transition-all duration-150 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {multiplayerStep === 'create' && (
+                <div className="text-center">
+                  <h3 className="text-lg font-bold mb-4" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    Create Room
+                  </h3>
+                  <div className="mb-4">
+                    <label className="block text-sm font-bold mb-2" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      Number of Players:
+                    </label>
+                    <select
+                      value={roomSize}
+                      onChange={(e) => setRoomSize(parseInt(e.target.value))}
+                      className="w-full p-2 border border-gray-400 bg-white text-gray-800 font-mono text-sm"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      <option value={2}>2 Players</option>
+                      <option value={3}>3 Players</option>
+                      <option value={4}>4 Players</option>
+                      <option value={5}>5 Players</option>
+                      <option value={6}>6 Players</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setMultiplayerStep('username')}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={createRoom}
+                      className="flex-1 bg-green-200 hover:bg-green-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-green-100 border-l-green-100 border-r-green-400 border-b-green-400 active:border-t-green-400 active:border-l-green-400 active:border-r-green-100 active:border-b-green-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Create Room
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {multiplayerStep === 'lobby' && (
+                <div>
+                  <h3 className="text-lg font-bold mb-4 text-center" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    Room: {roomId}
+                  </h3>
+                  
+                  <div className="mb-4">
+                    <h4 className="font-bold mb-2" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      Players ({players.length}/{roomSize}):
+                    </h4>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {players.map((player, index) => (
+                        <div key={player.id} className="flex items-center justify-between bg-gray-100 p-2">
+                          <span className="text-sm" style={{ 
+                            fontFamily: 'MS Sans Serif, sans-serif',
+                            imageRendering: 'pixelated',
+                            textRendering: 'optimizeSpeed',
+                            WebkitFontSmoothing: 'none',
+                            MozOsxFontSmoothing: 'grayscale'
+                          }}>
+                            {player.username} {player.isHost && '(Host)'}
+                          </span>
+                          <span className="text-xs text-gray-600">Player {index + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-bold mb-2" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      Room Link:
+                    </label>
+                    <div className="bg-gray-100 p-2 border border-gray-400 text-xs font-mono break-all" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      {getRoomLink()}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowMultiplayer(false);
+                        setMultiplayerStep('menu');
+                      }}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                      style={{ 
+                        fontFamily: 'MS Sans Serif, sans-serif',
+                        fontSize: '12px',
+                        imageRendering: 'pixelated',
+                        textRendering: 'optimizeSpeed',
+                        WebkitFontSmoothing: 'none',
+                        MozOsxFontSmoothing: 'grayscale'
+                      }}
+                    >
+                      Leave
+                    </button>
+                    {players[0]?.isHost && players.length >= roomSize && (
+                      <button
+                        onClick={startGame}
+                        className="flex-1 bg-green-200 hover:bg-green-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-green-100 border-l-green-100 border-r-green-400 border-b-green-400 active:border-t-green-400 active:border-l-green-400 active:border-r-green-100 active:border-b-green-100 transform active:translate-y-0.5 transition-all duration-150 font-mono"
+                        style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          fontSize: '12px',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}
+                      >
+                        Start Game
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {multiplayerStep === 'game' && (
+                <div>
+                  <h3 className="text-lg font-bold mb-4 text-center" style={{ 
+                    fontFamily: 'MS Sans Serif, sans-serif',
+                    imageRendering: 'pixelated',
+                    textRendering: 'optimizeSpeed',
+                    WebkitFontSmoothing: 'none',
+                    MozOsxFontSmoothing: 'grayscale'
+                  }}>
+                    Multiplayer Game
+                  </h3>
+                  
+                  <div className="mb-4 text-center">
+                    <div className="text-sm mb-2" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      Current Turn:
+                    </div>
+                    <div className="font-bold text-lg" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      {players[currentPlayer]?.username}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="bg-white border-2 border-t-gray-500 border-l-gray-500 border-r-gray-100 border-b-gray-100 p-4 mb-4 min-h-[80px] flex items-center justify-center shadow-inner">
+                      {currentGenre ? (
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-gray-800 mb-2" style={{ 
+                            fontFamily: 'MS Sans Serif, sans-serif',
+                            fontSize: '18px',
+                            imageRendering: 'pixelated',
+                            textRendering: 'optimizeSpeed',
+                            WebkitFontSmoothing: 'none',
+                            MozOsxFontSmoothing: 'grayscale'
+                          }}>
+                            {currentGenre}
+                          </div>
+                          <div className="text-xs text-gray-600" style={{ 
+                            fontFamily: 'MS Sans Serif, sans-serif',
+                            imageRendering: 'pixelated',
+                            textRendering: 'optimizeSpeed',
+                            WebkitFontSmoothing: 'none',
+                            MozOsxFontSmoothing: 'grayscale'
+                          }}>
+                            Genre for {players[currentPlayer]?.username}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-gray-400 text-center" style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          fontSize: '14px',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}>
+                          Click "Spin Genre Wheel" to generate
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 mb-4">
+                      <button
+                        onClick={generateRandomGenre}
+                        disabled={isGenerating}
+                        className="flex-1 bg-blue-200 hover:bg-blue-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-blue-100 border-l-blue-100 border-r-blue-400 border-b-blue-400 active:border-t-blue-400 active:border-l-blue-400 active:border-r-blue-100 active:border-b-blue-100 transform active:translate-y-0.5 transition-all duration-150 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          fontSize: '12px',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}
+                      >
+                        {isGenerating ? 'Spinning...' : 'Spin Genre Wheel'}
+                      </button>
+                      <button
+                        onClick={nextPlayer}
+                        disabled={!currentGenre || isGenerating}
+                        className="flex-1 bg-green-200 hover:bg-green-300 text-gray-800 font-bold py-2 px-4 border-2 border-t-green-100 border-l-green-100 border-r-green-400 border-b-green-400 active:border-t-green-400 active:border-l-green-400 active:border-r-green-100 active:border-b-green-100 transform active:translate-y-0.5 transition-all duration-150 font-mono disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          fontSize: '12px',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}
+                      >
+                        Next Player
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Chat System */}
+                  <div className="border border-gray-400">
+                    <div className="bg-gray-200 px-2 py-1 text-xs font-bold" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      Chat
+                    </div>
+                    <div className="h-32 overflow-y-auto p-2 bg-white text-xs" style={{ 
+                      fontFamily: 'MS Sans Serif, sans-serif',
+                      imageRendering: 'pixelated',
+                      textRendering: 'optimizeSpeed',
+                      WebkitFontSmoothing: 'none',
+                      MozOsxFontSmoothing: 'grayscale'
+                    }}>
+                      {chatMessages.map((msg, index) => (
+                        <div key={index} className="mb-1">
+                          <span className="font-bold">{msg.username}:</span> {msg.message}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex p-2 bg-gray-100">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a message..."
+                        className="flex-1 p-1 border border-gray-400 bg-white text-gray-800 font-mono text-xs mr-2"
+                        style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          fontSize: '10px',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}
+                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                      />
+                      <button
+                        onClick={sendMessage}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 border-2 border-t-gray-100 border-l-gray-100 border-r-gray-400 border-b-gray-400 active:border-t-gray-400 active:border-l-gray-400 active:border-r-gray-100 active:border-b-gray-100 transform active:translate-y-0.5 transition-all duration-150 font-mono text-xs"
+                        style={{ 
+                          fontFamily: 'MS Sans Serif, sans-serif',
+                          fontSize: '10px',
+                          imageRendering: 'pixelated',
+                          textRendering: 'optimizeSpeed',
+                          WebkitFontSmoothing: 'none',
+                          MozOsxFontSmoothing: 'grayscale'
+                        }}
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom animations */}
       <style jsx global>{`
