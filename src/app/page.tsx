@@ -41,7 +41,7 @@ export default function Home() {
   const [currentGenre, setCurrentGenre] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentPhrases, setCurrentPhrases] = useState<Array<{text: string, id: number, x: number, y: number}>>([]);
-  const [phraseId, setPhraseId] = useState(0);
+  const phraseId = useRef(0);
   const [showCustomListInput, setShowCustomListInput] = useState(false);
   const [customGenresInput, setCustomGenresInput] = useState("");
   const [activeGenres, setActiveGenres] = useState(songGenres);
@@ -63,7 +63,7 @@ export default function Home() {
   // Manage Japanese phrases appearance
   useEffect(() => {
     const showPhrases = () => {
-      const numPhrases = Math.floor(Math.random() * 3) + 1; // 1-3 phrases
+      const numPhrases = 1; // Only 1 phrase at a time
       const newPhrases = [];
       
       for (let i = 0; i < numPhrases; i++) {
@@ -78,29 +78,29 @@ export default function Home() {
         
         newPhrases.push({
           text: getRandomJapanesePhrase(),
-          id: phraseId + i,
+          id: phraseId.current + i,
           x: x,
           y: y
         });
       }
       
       setCurrentPhrases(newPhrases);
-      setPhraseId(phraseId + numPhrases);
+      phraseId.current += numPhrases;
       
-      // Remove phrases after 3 seconds (very fast for visibility)
+      // Remove phrases after 5 seconds
       setTimeout(() => {
         setCurrentPhrases([]);
-      }, 3000);
+      }, 5000);
     };
 
     // Initial show
     showPhrases();
     
-    // Set interval for showing phrases (4.5 seconds total: 3s display + 1.5s pause - very fast for visibility)
-    const interval = setInterval(showPhrases, 4500);
+    // Set interval for showing phrases (8 seconds total)
+    const interval = setInterval(showPhrases, 8000);
     
     return () => clearInterval(interval);
-  }, [phraseId]);
+  }, []);
 
   // Update time every second
   useEffect(() => {
@@ -1666,110 +1666,21 @@ export default function Home() {
         }
         
         @keyframes glitchChar {
-          0% { 
-            opacity: 0; 
-            transform: translate(0, 0) skew(0deg, 0deg);
-            filter: blur(0.5px) hue-rotate(0deg);
+          0% {
+            opacity: 0;
+            transform: translate(-5px, 0);
           }
-          5% { 
-            opacity: 1; 
-            transform: translate(0, 0) skew(0deg, 0deg);
-            filter: blur(0.5px) hue-rotate(0deg);
+          20% {
+            opacity: 1;
+            transform: translate(0, 0);
           }
-          10% { 
-            opacity: 0.7; 
-            transform: translate(-3px, 2px) skew(-3deg, 2deg);
-            filter: blur(1.5px) hue-rotate(90deg);
+          80% {
+            opacity: 1;
+            transform: translate(0, 0);
           }
-          15% { 
-            opacity: 1; 
-            transform: translate(3px, -2px) skew(2deg, -3deg);
-            filter: blur(1px) hue-rotate(180deg);
-          }
-          20% { 
-            opacity: 0.4; 
-            transform: translate(-2px, 0) skew(-2deg, 0deg);
-            filter: blur(2px) hue-rotate(270deg);
-          }
-          25% { 
-            opacity: 0.9; 
-            transform: translate(2px, 0) skew(3deg, 1deg);
-            filter: blur(0.5px) hue-rotate(360deg);
-          }
-          30% { 
-            opacity: 0.3; 
-            transform: translate(0, -2px) skew(0deg, -2deg);
-            filter: blur(1.8px) hue-rotate(45deg);
-          }
-          35% { 
-            opacity: 1; 
-            transform: translate(0, 2px) skew(-2deg, 0deg);
-            filter: blur(0.8px) hue-rotate(135deg);
-          }
-          40% { 
-            opacity: 0.5; 
-            transform: translate(-2px, 0) skew(2deg, 3deg);
-            filter: blur(2.2px) hue-rotate(225deg);
-          }
-          45% { 
-            opacity: 0.8; 
-            transform: translate(2px, 0) skew(-3deg, -2deg);
-            filter: blur(0.6px) hue-rotate(315deg);
-          }
-          50% { 
-            opacity: 0.2; 
-            transform: translate(0, 0) skew(0deg, 0deg);
-            filter: blur(1.5px) hue-rotate(0deg);
-          }
-          55% { 
-            opacity: 0.9; 
-            transform: translate(-3px, 0) skew(4deg, 0deg);
-            filter: blur(1px) hue-rotate(90deg);
-          }
-          60% { 
-            opacity: 0.4; 
-            transform: translate(3px, 0) skew(-4deg, 0deg);
-            filter: blur(1.8px) hue-rotate(180deg);
-          }
-          65% { 
-            opacity: 1; 
-            transform: translate(-1px, 0) skew(2deg, 2deg);
-            filter: blur(0.7px) hue-rotate(270deg);
-          }
-          70% { 
-            opacity: 0.3; 
-            transform: translate(1px, 0) skew(-2deg, -2deg);
-            filter: blur(2px) hue-rotate(360deg);
-          }
-          75% { 
-            opacity: 0.7; 
-            transform: translate(0, -2px) skew(0deg, 3deg);
-            filter: blur(1.2px) hue-rotate(45deg);
-          }
-          80% { 
-            opacity: 0.4; 
-            transform: translate(0, 2px) skew(0deg, -3deg);
-            filter: blur(1.8px) hue-rotate(135deg);
-          }
-          85% { 
-            opacity: 0.6; 
-            transform: translate(-2px, 0) skew(3deg, 0deg);
-            filter: blur(1px) hue-rotate(225deg);
-          }
-          90% { 
-            opacity: 0.2; 
-            transform: translate(2px, 0) skew(-3deg, 0deg);
-            filter: blur(1.5px) hue-rotate(315deg);
-          }
-          95% { 
-            opacity: 0.1; 
-            transform: translate(0, 0) skew(0deg, 0deg);
-            filter: blur(1px) hue-rotate(0deg);
-          }
-          100% { 
-            opacity: 0; 
-            transform: translate(0, 0) skew(0deg, 0deg);
-            filter: blur(0.5px) hue-rotate(0deg);
+          100% {
+            opacity: 0;
+            transform: translate(5px, 0);
           }
         }
         
